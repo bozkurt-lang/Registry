@@ -40,16 +40,24 @@ jobs:
             git push
           fi
 
+  deploy-pages:
+    needs: build-catalog
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
       - name: Setup Pages
+        id: pages
+        continue-on-error: true
         uses: actions/configure-pages@v5
-        with:
-          enablement: true
 
       - name: Upload Pages artifact
+        if: steps.pages.outputs.base_url != ''
         uses: actions/upload-pages-artifact@v3
         with:
           path: docs
 
       - name: Deploy to GitHub Pages
+        if: steps.pages.outputs.base_url != ''
         id: deployment
         uses: actions/deploy-pages@v4
