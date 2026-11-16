@@ -16,23 +16,16 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Check changed files
-        id: changed
+      - name: Validate changed index files
         run: |
-          git diff --name-only origin/${{ github.base_ref }}...HEAD > changed_files.txt
-          cat changed_files.txt
+          git diff --name-only "origin/${{ github.base_ref }}...HEAD" > changed_files.txt
           NON_INDEX=$(grep -v '^index/.*\.json$' changed_files.txt || true)
           if [ -n "$NON_INDEX" ]; then
             echo "Pull requests may only add or update files under index/*.json:"
             echo "$NON_INDEX"
             exit 1
           fi
-          INDEX_FILES=$(grep '^index/.*\.json$' changed_files.txt || true)
-          echo "files<<EOF" >> "$GITHUB_OUTPUT"
-          echo "$INDEX_FILES" >> "$GITHUB_OUTPUT"
-          echo "EOF" >> "$GITHUB_OUTPUT"
-
-      - name: Validate package metadata and tarballs
-        if: steps.changed.outputs.files != ''
-        run: |
-          python3 scripts/validate.py --verify-network ${{ join(fromJSON(format('["{0}"]', join(split(steps.changed.outputs.files, '\n'), '","'))), ' ') }}
+          grep '^index/.*\.json$' changed_files.txt > index_files.txt || true
+          if [ -s index_files.txt ]; then
+            xargs -d '\n' -r python3 scripts/validate.py --verify-network < index_files.txt
+          fi
