@@ -17,6 +17,9 @@ jobs:
           python-version: "3.12"
 
       - name: Validate changed index files
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
         run: |
           git diff --name-only "origin/${{ github.base_ref }}...HEAD" > changed_files.txt
           NON_INDEX=$(grep -v '^index/.*\.json$' changed_files.txt || true)
@@ -27,5 +30,5 @@ jobs:
           fi
           grep '^index/.*\.json$' changed_files.txt > index_files.txt || true
           if [ -s index_files.txt ]; then
-            xargs -d '\n' -r python3 scripts/validate.py --verify-network < index_files.txt
+            xargs -d '\n' -r python3 scripts/validate.py --verify-network --pr-author "$PR_AUTHOR" < index_files.txt
           fi

@@ -1,0 +1,31 @@
+name: Auto-Merge Validated PR
+
+on:
+  workflow_run:
+    workflows: ["Validate Registry PR"]
+    types:
+      - completed
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  auto-merge:
+    if: >-
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Merge validated pull request
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          REPO: ${{ github.repository }}
+        run: |
+          PR_NUMBER=$(gh api "repos/${REPO}/commits/${HEAD_SHA}/pulls" --jq '[.[] | select(.state == "open")] | .[0].number // empty')
+          if [ -z "$PR_NUMBER" ]; then
+            echo "No open pull request found for ${HEAD_SHA}."
+            exit 0
+          fi
+          gh pr merge "$PR_NUMBER" --repo "$REPO" --squash
